@@ -1,19 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import DocumentList from './components/DocumentList';
-import CameraScan from './components/CameraScan';
-import TextEditor from './components/TextEditor';
-import DocumentDetail from './components/DocumentDetail';
+import AppNavigator from './navigation/AppNavigator';
 
-const Stack = createStackNavigator();
 const STORAGE_KEY = '@scanned_documents';
 
 export default function App() {
-  // Sample seed data matching your SRS ScannedDocument database schema
   const initialDocuments = [
     {
       id: 1,
@@ -35,7 +29,6 @@ export default function App() {
 
   const [documents, setDocuments] = useState(initialDocuments);
 
-  // Load saved documents from local storage on launch
   useEffect(() => {
     const loadPersistedData = async () => {
       try {
@@ -50,7 +43,6 @@ export default function App() {
     loadPersistedData();
   }, []);
 
-  // Save document state array to AsyncStorage (FR-05)
   const saveDocumentsToStorage = async (updatedDocs) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedDocs));
@@ -59,7 +51,6 @@ export default function App() {
     }
   };
 
-  // Handler to add a new document item
   const handleSaveDocument = (title, raw_text, category, image_path) => {
     const newDoc = {
       id: Date.now(),
@@ -75,7 +66,6 @@ export default function App() {
     saveDocumentsToStorage(updated);
   };
 
-  // Handler to delete a document item
   const handleDeleteDocument = (id) => {
     const updated = documents.filter((doc) => doc.id !== id);
     setDocuments(updated);
@@ -84,65 +74,11 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="DocumentList" screenOptions={{ headerShown: false }}>
-        
-        {/* FR-05 & FR-06: Document Library & Search Screen */}
-        <Stack.Screen name="DocumentList">
-          {(props) => (
-            <DocumentList
-              {...props}
-              documents={documents}
-              onGoToScan={() => props.navigation.navigate('CameraScan')}
-              onSelectDoc={(doc) => props.navigation.navigate('DocumentDetail', { document: doc })}
-            />
-          )}
-        </Stack.Screen>
-
-        {/* FR-01 & FR-03: Camera Preview / OCR Capture Screen */}
-        <Stack.Screen name="CameraScan">
-          {(props) => (
-            <CameraScan
-              {...props}
-              onTextExtracted={(extractedText, imagePath) => {
-                props.navigation.navigate('TextEditor', {
-                  extractedText: extractedText,
-                  imagePath: imagePath,
-                });
-              }}
-              onCancel={() => props.navigation.goBack()}
-            />
-          )}
-        </Stack.Screen>
-
-        {/* FR-04: Text Editor & Review Screen */}
-        <Stack.Screen name="TextEditor">
-          {(props) => (
-            <TextEditor
-              {...props}
-              onSave={(title, raw_text, category, image_path) => {
-                handleSaveDocument(title, raw_text, category, image_path);
-                props.navigation.navigate('DocumentList');
-              }}
-              onCancel={() => props.navigation.navigate('DocumentList')}
-            />
-          )}
-        </Stack.Screen>
-
-        {/* FR-07: Document Viewer & Exporter */}
-        <Stack.Screen name="DocumentDetail">
-          {(props) => (
-            <DocumentDetail
-              {...props}
-              onDelete={(id) => {
-                handleDeleteDocument(id);
-                props.navigation.navigate('DocumentList');
-              }}
-              onBack={() => props.navigation.goBack()}
-            />
-          )}
-        </Stack.Screen>
-
-      </Stack.Navigator>
+      <AppNavigator
+        documents={documents}
+        onSaveDocument={handleSaveDocument}
+        onDeleteDocument={handleDeleteDocument}
+      />
       <StatusBar style="auto" />
     </NavigationContainer>
   );
